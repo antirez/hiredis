@@ -123,7 +123,8 @@ static void *createStringObject(const redisReadTask *task, char *str, size_t len
 
     assert(task->type == REDIS_REPLY_ERROR  ||
            task->type == REDIS_REPLY_STATUS ||
-           task->type == REDIS_REPLY_STRING);
+           task->type == REDIS_REPLY_STRING ||
+           task->type == REDIS_REPLY_VERB);
 
     /* Copy string value */
     if (task->type == REDIS_REPLY_VERB) {

@@ -380,7 +380,9 @@ static int processBulkItem(redisReader *r) {
             /* Only continue when the buffer contains the entire bulk item. */
             bytelen += len+2; /* include \r\n */
             if (r->pos+bytelen <= r->len) {
-                if ((len < 4 && cur->type == REDIS_REPLY_VERB) || s[5] != ':') {
+                if ((cur->type == REDIS_REPLY_VERB && len < 4) ||
+                    (cur->type == REDIS_REPLY_VERB && s[5] != ':'))
+                {
                     __redisReaderSetError(r,REDIS_ERR_PROTOCOL,
                             "Verbatim string 4 bytes of content type are "
                             "missing or incorrectly encoded.");
@@ -529,6 +531,9 @@ static int processItem(redisReader *r) {
                 break;
             case '#':
                 cur->type = REDIS_REPLY_BOOL;
+                break;
+            case '=':
+                cur->type = REDIS_REPLY_VERB;
                 break;
             default:
                 __redisReaderSetErrorProtocolByte(r,*p);
