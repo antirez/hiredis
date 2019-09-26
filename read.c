@@ -425,7 +425,7 @@ static int processAggregateItem(redisReader *r) {
 
     /* Use a dynamically allocated stack if there are too nested
      * aggregated data types levels. */
-    if (r->ridx == REDIS_READER_STATIC_RSTACK_LEN-1) {
+    if (r->ridx >= REDIS_READER_STATIC_RSTACK_LEN-1) {
         int first_alloc = (r->rstack == r->static_rstack);
         redisReadTask *old_rstack = r->dynamic_rstack;
         r->dynamic_rstack = realloc(r->dynamic_rstack,
