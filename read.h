@@ -64,6 +64,7 @@
 #define REDIS_REPLY_VERB 14
 
 #define REDIS_READER_MAX_BUF (1024*16)  /* Default max unused reader buffer. */
+#define REDIS_READER_STATIC_RSTACK_LEN 9
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,7 +98,9 @@ typedef struct redisReader {
     size_t len; /* Buffer length */
     size_t maxbuf; /* Max length of unused buffer */
 
-    redisReadTask rstack[9];
+    redisReadTask static_rstack[REDIS_READER_STATIC_RSTACK_LEN];
+    redisReadTask *dynamic_rstack; /* Allocated only if needed. */
+    redisReadTask *rstack;         /* Points to static OR dynamic. */
     int ridx; /* Index of current read task */
     void *reply; /* Temporary reply pointer */
 

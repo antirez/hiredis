@@ -423,11 +423,24 @@ static int processAggregateItem(redisReader *r) {
     long long elements;
     int root = 0, len;
 
-    /* Set error for nested multi bulks with depth > 7 */
-    if (r->ridx == 8) {
-        __redisReaderSetError(r,REDIS_ERR_PROTOCOL,
-            "No support for nested multi bulk replies with depth > 7");
-        return REDIS_ERR;
+    /* Use a dynamically allocated stack if there are too nested
+     * aggregated data types levels. */
+    if (r->ridx == REDIS_READER_STATIC_RSTACK_LEN-1) {
+        int first_alloc = (r->rstack == r->static_rstack);
+        redisReadTask *old_rstack = r->dynamic_rstack;
+        r->dynamic_rstack = realloc(r->dynamic_rstack,
+                                    sizeof(redisReadTask)*(r->ridx+2));
+        if (r->dynamic_rstack == NULL) {
+            r->dynamic_rstack = old_rstack;
+            __redisReaderSetError(r,REDIS_ERR_OOM,
+                "Out of memory allocating reader tasks stack");
+            return REDIS_ERR;
+        }
+        if (first_alloc) {
+            memcpy(r->dynamic_rstack, r->static_rstack,
+                   sizeof(r->static_rstack));
+        }
+        r->rstack = r->dynamic_rstack;
     }
 
     if ((p = readLine(r,&len)) != NULL) {
@@ -576,6 +589,8 @@ redisReader *redisReaderCreateWithFunctions(redisReplyObjectFunctions *fn) {
 
     r->fn = fn;
     r->buf = sdsempty();
+    r->rstack = r->static_rstack;
+    r->dynamic_rstack = NULL;
     r->maxbuf = REDIS_READER_MAX_BUF;
     if (r->buf == NULL) {
         free(r);
@@ -592,6 +607,7 @@ void redisReaderFree(redisReader *r) {
     if (r->reply != NULL && r->fn && r->fn->freeObject)
         r->fn->freeObject(r->reply);
     sdsfree(r->buf);
+    free(r->dynamic_rstack);
     free(r);
 }
 
